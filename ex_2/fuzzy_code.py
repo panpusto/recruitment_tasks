@@ -104,7 +104,7 @@ if __name__ == "__main__":
             product_id = product["id"]
             total_supply = []
             for p in products_ids:
-                data = fetch_product_data(item)
+                data = fetch_product_data(p)
                 file = write_retrieved_data(data)
                 product = load_written_data(file)
                 supply = 0
@@ -112,9 +112,9 @@ if __name__ == "__main__":
                     print(stock)
                     for s in stock["stock_data"]:
                         if s["stock_id"] == 1:
-                            supply += s["quantity"]
+                            supply += int(s["quantity"])
                             total_supply.append(supply)
-            product_supply = min(total_supply)
+            product_supply = sum(total_supply)
             supplied_product = (
                 str(datetime.datetime.now())[:19],
                 str(product_id),
