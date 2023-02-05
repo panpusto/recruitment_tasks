@@ -24,7 +24,7 @@ def fetch_product_data(item_id):
 
 def write_retrieved_data(retrieved_data):
     """
-    Written retrieved data as text file.
+    Writes retrieved data as text file.
     :param retrieved_data: product info
     :return: text file with data written in binary mode
     """
