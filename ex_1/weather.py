@@ -16,7 +16,10 @@ file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 logger.addHandler(file_handler)
 
-requests_cache.install_cache(cache_name=f'{dir_path}/weather_cache', backend='sqlite', expire_after=300)
+requests_cache.install_cache(
+    cache_name=f'{dir_path}/weather_cache',
+    backend='sqlite', 
+    expire_after=300)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--location",
@@ -81,8 +84,7 @@ def fetch_data(city, date1, date2):
         logger.error("Wrong parameters type or city isn't in database. Check parameters format and try again.")
 
     except requests.exceptions.ConnectionError as err:
-        logger.error("Connection error:", err)
-            
+        logger.error('Connection error')
 
 def display_weather_data(data):
     """
@@ -104,6 +106,7 @@ def display_weather_data(data):
             )
             print(info)
             print(break_line)
+        logger.info(f'Data displayed: {data}')
 
     except AttributeError:
         return
@@ -127,6 +130,7 @@ def write_data_as_csv_file(data, file_name):
                     "avg_temp": row["avg_temp"],
                     "avg_precip": row["avg_precip"]})
             csv_file.flush()
+        
     else:
         with open(f"{dir_path}/{file_name}.csv", "w", newline='') as csv_file:
             field_names = ["location", "date", "avg_temp", "avg_precip"]
@@ -142,7 +146,7 @@ def write_data_as_csv_file(data, file_name):
             csv_file.flush()
 
 
-def main():
+if __name__ == "__main__":
     if args.location and args.start_date and args.display:
         fetched_data = fetch_data(args.location, args.start_date, args.end_date)
         display_weather_data(fetched_data)
@@ -150,16 +154,12 @@ def main():
     elif args.location and args.start_date and args.save:
         fetched_data = fetch_data(args.location, args.start_date, args.end_date)
         write_data_as_csv_file(fetched_data, args.save)
-        logger.info(fetched_data)
+        logger.info(f'Data saved: {fetched_data}')
 
     elif not args.display and not args.save:
         parser.print_help()
-        logger.error("Choose whether you want to display data or save it as csv file.")
-        return
+        logger.error("Missing mandatory arg: -d/--display or -s/--save")
+        print("Choose whether you want to display data or save it as csv file.")
 
     else:
         parser.print_help()
-
-
-if __name__ == "__main__":
-    main()
