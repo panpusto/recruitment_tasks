@@ -3,9 +3,20 @@ import requests
 import requests_cache
 import csv
 from datetime import date, datetime
+import os
+import logging
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
-requests_cache.install_cache(cache_name='weather_cache', backend='sqlite', expire_after=180)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+file_handler = logging.FileHandler(os.path.join(dir_path, 'events.log'))
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logger.addHandler(file_handler)
+
+requests_cache.install_cache(cache_name=f'{dir_path}/weather_cache', backend='sqlite', expire_after=300)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--location",
@@ -67,11 +78,11 @@ def fetch_data(city, date1, date2):
 
     except requests.exceptions.JSONDecodeError:
         parser.print_help()
-        print("Wrong parameters type or city isn't in database. Check parameters format and try again.")
+        logger.error("Wrong parameters type or city isn't in database. Check parameters format and try again.")
 
     except requests.exceptions.ConnectionError as err:
-        print("Connection error:", err)
-
+        logger.error("Connection error:", err)
+            
 
 def display_weather_data(data):
     """
@@ -105,21 +116,33 @@ def write_data_as_csv_file(data, file_name):
     :param file_name: name of file
     :return: csv file with weather data
     """
-    with open(f"{file_name}.csv", "w", newline='') as csv_file:
-        field_names = ["location", "date", "avg_temp", "avg_precip"]
-        writer = csv.DictWriter(csv_file, fieldnames=field_names)
+    if os.path.isfile(f"{dir_path}/{file_name}.csv"):
+        with open(f"{dir_path}/{file_name}.csv", "a", newline='') as csv_file:
+            field_names = ["location", "date", "avg_temp", "avg_precip"]
+            writer = csv.DictWriter(csv_file, fieldnames=field_names)
+            for row in data.get("days"):
+                writer.writerow({
+                    "location": data.get("location"),
+                    "date": row["date"],
+                    "avg_temp": row["avg_temp"],
+                    "avg_precip": row["avg_precip"]})
+            csv_file.flush()
+    else:
+        with open(f"{dir_path}/{file_name}.csv", "w", newline='') as csv_file:
+            field_names = ["location", "date", "avg_temp", "avg_precip"]
+            writer = csv.DictWriter(csv_file, fieldnames=field_names)
 
-        writer.writeheader()
-        for row in data.get("days"):
-            writer.writerow({
-                "location": data.get("location"),
-                "date": row["date"],
-                "avg_temp": row["avg_temp"],
-                "avg_precip": row["avg_precip"]})
-        csv_file.flush()
+            writer.writeheader()
+            for row in data.get("days"):
+                writer.writerow({
+                    "location": data.get("location"),
+                    "date": row["date"],
+                    "avg_temp": row["avg_temp"],
+                    "avg_precip": row["avg_precip"]})
+            csv_file.flush()
 
 
-if __name__ == "__main__":
+def main():
     if args.location and args.start_date and args.display:
         fetched_data = fetch_data(args.location, args.start_date, args.end_date)
         display_weather_data(fetched_data)
@@ -127,11 +150,16 @@ if __name__ == "__main__":
     elif args.location and args.start_date and args.save:
         fetched_data = fetch_data(args.location, args.start_date, args.end_date)
         write_data_as_csv_file(fetched_data, args.save)
-        print("File saved.")
+        logger.info(fetched_data)
 
     elif not args.display and not args.save:
         parser.print_help()
-        print("Choose whether you want to display data or save it as csv file.")
+        logger.error("Choose whether you want to display data or save it as csv file.")
+        return
 
     else:
         parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
